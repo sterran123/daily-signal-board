@@ -405,6 +405,103 @@ document.querySelectorAll('[data-failure]').forEach(button => {
   ], `${button.textContent.trim()} · 마지막 정상값 보존 시험 · 합성 전용`));
 });
 
+let sharedLog = null;
+
+async function loadSharedLog() {
+  try {
+    const response = await fetch('data/daily.json', { cache: 'no-store' });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const json = await response.json();
+    if (json?.schema_version !== Core.SHARED_LOG_SCHEMA || !Array.isArray(json.readings)) throw new Error('공유 기록 형식이 다릅니다.');
+    sharedLog = json;
+  } catch {
+    sharedLog = null;
+  }
+  renderShared();
+}
+
+function renderShared() {
+  const body = $('sharedRows');
+  body.replaceChildren();
+  const readings = sharedLog?.readings || [];
+  let count = 0;
+  for (const location of Core.LOCATIONS) {
+    const signalId = Core.signalIdFor(location.id);
+    const rows = readings.filter(row => row.signal_id === signalId)
+      .sort((left, right) => left.record_date.localeCompare(right.record_date));
+    count += rows.length;
+    const latest = rows[rows.length - 1] || null;
+    const comparison = latest ? Core.comparisonFor(rows, latest) : null;
+    const tr = document.createElement('tr');
+    const name = document.createElement('td');
+    const date = document.createElement('td');
+    const value = document.createElement('td');
+    const delta = document.createElement('td');
+    const total = document.createElement('td');
+    name.textContent = location.name;
+    date.textContent = latest ? formatDate(latest.record_date) : '—';
+    value.textContent = latest ? formatValue(latest.normalized_value, latest.unit) : '—';
+    delta.textContent = comparison ? formatDelta(comparison) : '—';
+    total.textContent = `${rows.length}일`;
+    tr.append(name, date, value, delta, total);
+    body.appendChild(tr);
+  }
+  $('sharedCount').textContent = `${count}건`;
+  $('sharedEmpty').hidden = count > 0;
+  $('sharedMeta').textContent = sharedLog?.generated_at
+    ? `마지막 수집 ${formatTime(sharedLog.generated_at)} · GitHub Actions가 저장소에 커밋한 공용 파일입니다.`
+    : '공유 기록 파일을 아직 불러오지 못했습니다. 첫 수집 후 표시됩니다.';
+}
+
+function runEvidenceCheck() {
+  const report = Core.evidenceReportFor(liveState.daily_readings, { signalId: Core.signalIdFor(selectedLocationId) });
+  const list = $('evidenceLog');
+  list.replaceChildren();
+  if (!report.signals.length) {
+    $('evidenceStatus').textContent = '기록 없음';
+    $('evidenceSummary').textContent = '이 브라우저에 보존된 실제 일별 기록이 없습니다. 먼저 정상 조회를 실행하세요.';
+    $('receiptPreview').hidden = true;
+    return;
+  }
+  for (const signal of report.signals) {
+    const item = document.createElement('li');
+    item.className = signal.ready ? 'pass' : 'fail';
+    item.textContent = `${signal.location_name} · 날짜 ${signal.dates.length}건 · ${signal.ready ? 'C22~C24 시뮬레이션 통과' : '증거 부족'}`;
+    list.appendChild(item);
+    for (const check of signal.checks) {
+      const detail = document.createElement('li');
+      detail.className = check.ok ? 'pass' : 'fail';
+      detail.textContent = `   ${check.ok ? 'PASS' : 'FAIL'} ${check.id} — ${check.detail}`;
+      list.appendChild(detail);
+    }
+  }
+  const primary = report.primary;
+  $('evidenceStatus').textContent = primary?.ready ? `${primary.location_name} · 증거 요건 충족` : '증거 부족';
+  $('evidenceSummary').textContent = primary?.ready
+    ? `${primary.location_name}의 ${primary.dates.slice(-2).join(' · ')} 기록으로 영수증 2건을 봉인할 수 있는 상태입니다. 실제 봉인과 server_created_at은 제출 과정에서 부여됩니다.`
+    : '같은 지역의 서로 다른 KST 날짜 실제 기록 2건이 아직 없습니다. 날짜가 바뀐 뒤 같은 지역을 한 번 더 정상 조회하세요.';
+  const preview = $('receiptPreview');
+  if (primary?.receipts?.length) {
+    preview.hidden = false;
+    preview.textContent = JSON.stringify(primary.receipts, null, 2);
+  } else {
+    preview.hidden = true;
+    preview.textContent = '';
+  }
+}
+
+$('runEvidence').addEventListener('click', runEvidenceCheck);
+$('copyEvidence').addEventListener('click', async () => {
+  const payload = JSON.stringify({ saved_at: new Date().toISOString(), live: liveState }, null, 2);
+  try {
+    await navigator.clipboard.writeText(payload);
+    $('evidenceSummary').textContent = '상태 JSON을 클립보드에 복사했습니다. 파일로 저장해 scripts/check-evidence.mjs에 넘기면 같은 점검을 실행합니다.';
+  } catch {
+    $('evidenceSummary').textContent = '클립보드 복사가 차단되었습니다. 브라우저 개발자 도구에서 localStorage 값을 확인하세요.';
+  }
+});
+
 renderLive();
 renderFixture();
 refreshLive();
+loadSharedLog();

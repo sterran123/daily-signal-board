@@ -130,6 +130,70 @@ test('every failure type gives its own explanation and next action', () => {
   assert.match(Core.errorGuidance('rate_limit', 60).next_action, /60초/);
 });
 
+test('shared log upserts one row per signal and KST date across regions', () => {
+  const makeReading = (locationId, time, value, fetchedAt) => Core.normalizeOpenMeteo({
+    timezone: 'Asia/Seoul',
+    current_units: { temperature_2m: '°C' },
+    current: { time, temperature_2m: value }
+  }, { fetchedAt, locationId });
+  let log = Core.emptySharedLog();
+  log = Core.upsertSharedRow(log, makeReading('seoul', '2026-08-24T17:00', 28.4, '2026-08-24T14:59:00.000Z'));
+  log = Core.upsertSharedRow(log, makeReading('busan', '2026-08-24T17:00', 29.0, '2026-08-24T14:59:00.000Z'));
+  assert.equal(log.readings.length, 2);
+  log = Core.upsertSharedRow(log, makeReading('seoul', '2026-08-24T18:00', 27.9, '2026-08-24T14:59:30.000Z'));
+  assert.equal(log.readings.length, 2);
+  const seoul = log.readings.find(row => row.signal_id === 'seoul.temperature_2m');
+  assert.equal(seoul.normalized_value, 27.9);
+  assert.equal(seoul.first_fetched_at, '2026-08-24T14:59:00.000Z');
+  assert.equal(seoul.last_fetched_at, '2026-08-24T14:59:30.000Z');
+  log = Core.upsertSharedRow(log, makeReading('seoul', '2026-08-25T09:00', 25.1, '2026-08-25T00:10:00.000Z'));
+  assert.equal(log.readings.length, 3);
+  assert.equal(log.schema_version, Core.SHARED_LOG_SCHEMA);
+});
+
+test('evidence report seals two different real KST dates and recomputes the displayed delta', () => {
+  const makeReading = (time, value, fetchedAt) => Core.normalizeOpenMeteo({
+    timezone: 'Asia/Seoul',
+    current_units: { temperature_2m: '°C' },
+    current: { time, temperature_2m: value }
+  }, { fetchedAt, locationId: 'seoul' });
+  let state = Core.resetEvaluationState();
+  state = Core.applySuccessfulReading(state, makeReading('2026-08-24T17:00', 18.3, '2026-08-24T08:59:00.000Z'));
+  let report = Core.evidenceReportFor(state.daily_readings, { signalId: 'seoul.temperature_2m' });
+  assert.equal(report.signals[0].ready, false);
+  assert.equal(report.signals[0].checks[0].id, 'T04-C22');
+  state = Core.applySuccessfulReading(state, makeReading('2026-08-25T17:00', 20.3, '2026-08-25T08:59:00.000Z'));
+  report = Core.evidenceReportFor(state.daily_readings, { signalId: 'seoul.temperature_2m' });
+  const seoul = report.signals.find(signal => signal.signal_id === 'seoul.temperature_2m');
+  assert.equal(seoul.ready, true);
+  assert.deepEqual(seoul.checks.map(check => check.ok), [true, true, true]);
+  assert.equal(seoul.receipts.length, 2);
+  assert.deepEqual(seoul.receipts.map(receipt => receipt.simulated_server_date), ['2026-08-24', '2026-08-25']);
+  assert.equal(seoul.receipts[0].payload.normalized_value, 18.3);
+  assert.equal(seoul.receipts[0].payload.source_observed_at, state.daily_readings[0].reading.source_time);
+  assert.equal(seoul.receipts[0].payload.source_url, state.daily_readings[0].reading.source_url);
+  assert.equal(seoul.receipts[0].payload.unit, '°C');
+  assert.equal(seoul.receipts[0].kind, 't04_day');
+  assert.equal(seoul.recomputed_delta.magnitude, 2);
+  assert.equal(seoul.recomputed_delta.direction, 'increase');
+  assert.equal(report.primary.signal_id, 'seoul.temperature_2m');
+});
+
+test('evidence report never mixes another region into a two-day pair', () => {
+  const makeReading = (locationId, time, value, fetchedAt) => Core.normalizeOpenMeteo({
+    timezone: 'Asia/Seoul',
+    current_units: { temperature_2m: '°C' },
+    current: { time, temperature_2m: value }
+  }, { fetchedAt, locationId });
+  let state = Core.resetEvaluationState();
+  state = Core.applySuccessfulReading(state, makeReading('seoul', '2026-08-24T17:00', 18.3, '2026-08-24T08:59:00.000Z'));
+  state = Core.applySuccessfulReading(state, makeReading('busan', '2026-08-25T09:00', 21.0, '2026-08-25T00:30:00.000Z'));
+  const report = Core.evidenceReportFor(state.daily_readings);
+  assert.equal(report.signals.length, 2);
+  assert.equal(report.ready_signals.length, 0);
+  assert.ok(report.signals.every(signal => signal.dates.length === 1 && signal.ready === false));
+});
+
 test('retry after a synthetic failure returns to fresh and adds exactly one next-day row', () => {
   let state = successBaseline();
   state = run(state, 'timeout.json');

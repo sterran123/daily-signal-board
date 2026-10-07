@@ -1,0 +1,34 @@
+name: Collect shared daily readings
+
+on:
+  schedule:
+    - cron: "35 15 * * *" # 매일 00:35 KST
+    - cron: "35 3 * * *"  # 매일 12:35 KST (스케줄 지연 대비)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: shared-daily-log
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Fetch Open-Meteo for all regions and upsert shared log
+        run: node scripts/fetch-shared.mjs
+      - name: Commit shared log if readings changed
+        run: |
+          git add data/daily.json
+          if git diff --cached --quiet; then
+            echo "no shared reading changes"
+            exit 0
+          fi
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -m "Collect shared daily readings"
+          git push

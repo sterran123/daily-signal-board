@@ -19,6 +19,14 @@ Open-Meteo `current.temperature_2m`를 사용합니다. 선택한 지역의 시�
 
 GitHub Pages는 정적 파일을 공개하는 호스팅이며 방문자 간 기록을 공유하지 않습니다. 정상 조회 기록과 선택 지역은 해당 브라우저의 로컬 저장소에 남습니다. 두 날짜를 비교하려면 같은 브라우저에서 같은 지역을 선택한 채 서로 다른 KST 날짜에 정상 조회해야 합니다. 이 앱에는 계정·위치 권한·API 비밀키가 없으며 fixture의 D1/D2는 실제 날짜 증거를 대신하지 않습니다.
 
+## 공유 일별 기록
+
+`data/daily.json`은 GitHub Actions가 하루 두 번(00:35·12:35 KST) 7개 지역을 조회해 이 저장소에 커밋하는 공용 일별 기록입니다. 방문자 브라우저는 이 파일을 읽기만 하므로 누가 들어와도 같은 지역별 기록을 볼 수 있고, 방문자가 직접 조회한 기록은 여전히 각자의 로컬 저장소에만 남습니다. 수집은 `.github/workflows/daily-collect.yml`과 `scripts/fetch-shared.mjs`가 담당하고, 같은 `signal_id + record_date` upsert 규칙은 앱과 동일합니다.
+
+## 제출 증거 시뮬레이션
+
+페이지의 "제출 증거 시뮬레이션" 패널은 이 브라우저에 보존된 실제 일별 기록을 T04-C22~C24 기준으로 미리 점검합니다. 같은 지역의 서로 다른 KST 날짜 2건 확인, 봉인 영수증 payload 필드와 저장값·화면값 일치, 두 값으로 전일 대비 재계산을 검사하고 시뮬레이션 영수증을 보여 줍니다. 실제 `server_created_at`은 제출 서버가 부여하므로 여기서는 기록 날짜로 대체합니다. 브라우저 밖에서는 "상태 JSON 복사"로 받은 파일을 `node scripts/check-evidence.mjs <파일>`에 넘기면 같은 점검이 실행됩니다.
+
 ## 실행
 
 앱은 `index.html`, `styles.css`, `app.js`, `core.js`로 이루어진 순수 HTML·CSS·JavaScript이며 프레임워크나 패키지 설치가 없습니다. Node.js는 로컬 정적 서버와 선택 테스트 실행에만 사용합니다.
@@ -35,7 +43,7 @@ node --test core.test.cjs
 
 ## 배포
 
-`main` 브랜치에 push하면 `.github/workflows/pages.yml`이 구문 검사와 9개 결정론 테스트를 통과한 뒤 GitHub Pages에 배포합니다. 결과물 주소는 `https://sterran123.github.io/daily-signal-board/`입니다.
+`main` 브랜치에 push하면 `.github/workflows/pages.yml`이 구문 검사와 12개 결정론 테스트를 통과한 뒤 GitHub Pages에 배포합니다. 결과물 주소는 `https://sterran123.github.io/daily-signal-board/`입니다.
 
 ## T04 공개 fixture
 

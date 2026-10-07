@@ -110,6 +110,27 @@
       </article>
     </section>
 
+    <section class="shared-section" aria-labelledby="shared-title">
+      <article class="card shared-card">
+        <div class="card-head">
+          <div>
+            <p class="eyebrow">SHARED DAILY LOG</p>
+            <h2 id="shared-title">모든 방문자가 보는 공유 기록</h2>
+          </div>
+          <span class="record-count" id="sharedCount">0건</span>
+        </div>
+        <p class="history-note">GitHub Actions가 하루 두 번 7개 지역의 Open-Meteo 값을 조회해 이 저장소에 커밋한 공용 일별 기록입니다. 위의 일별 기록은 이 브라우저에서 직접 조회한 기록이며, 두 기록은 서로 섞이지 않습니다.</p>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th scope="col">지역</th><th scope="col">최신 날짜</th><th scope="col">최신 기온</th><th scope="col">전일 대비</th><th scope="col">기록 수</th></tr></thead>
+            <tbody id="sharedRows"></tbody>
+          </table>
+        </div>
+        <p class="empty-state" id="sharedEmpty">아직 수집된 공유 기록이 없습니다.</p>
+        <p class="storage-note" id="sharedMeta">공유 기록 파일을 불러오는 중입니다.</p>
+      </article>
+    </section>
+
     <details class="fixture-panel" id="fixturePanel">
       <summary>
         <span><strong>실패 상황 재생</strong><small>공개 합성 fixture · 실제 날씨 기록과 완전히 분리</small></span>
@@ -134,6 +155,26 @@
           <p id="fixtureSummary">실패를 고르면 D1-A와 D1-B 기준값 뒤에 해당 fixture를 재생합니다.</p>
           <div class="fixture-metrics" id="fixtureMetrics"></div>
           <ol class="fixture-log" id="fixtureLog"></ol>
+        </div>
+      </div>
+    </details>
+
+    <details class="fixture-panel" id="evidencePanel">
+      <summary>
+        <span><strong>제출 증거 시뮬레이션</strong><small>이 브라우저의 실제 기록을 T04-C22~C24 기준으로 미리 점검 · 실제 영수증은 제출 시스템이 생성</small></span>
+        <span class="summary-mark" aria-hidden="true">＋</span>
+      </summary>
+      <div class="fixture-content">
+        <div class="fixture-warning">이 점검은 제출 시스템의 봉인 영수증을 대신하지 않습니다. 영수증의 server_created_at은 제출 서버가 부여하므로 여기서는 KST 기록 날짜로 대체해 시뮬레이션합니다.</div>
+        <div class="fixture-actions">
+          <button class="button button-primary" id="runEvidence" type="button">증거 점검 실행</button>
+          <button class="button button-quiet" id="copyEvidence" type="button">상태 JSON 복사</button>
+        </div>
+        <div class="fixture-result" id="evidenceResult">
+          <div><span class="eyebrow">EVIDENCE CHECK</span><strong id="evidenceStatus">실행 전</strong></div>
+          <p id="evidenceSummary">실행하면 이 브라우저에 보존된 실제 일별 기록을 점검합니다.</p>
+          <ol class="fixture-log" id="evidenceLog"></ol>
+          <pre class="receipt-preview" id="receiptPreview" hidden></pre>
         </div>
       </div>
     </details>

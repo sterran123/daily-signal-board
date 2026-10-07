@@ -258,9 +258,144 @@
     return false;
   }
 
+  const SHARED_LOG_SCHEMA = 'aleph-t04-shared-daily-v1';
+
+  function emptySharedLog() {
+    return {
+      schema_version: SHARED_LOG_SCHEMA,
+      generated_at: null,
+      collector: 'github-actions-schedule',
+      source: 'Open-Meteo current.temperature_2m',
+      readings: []
+    };
+  }
+
+  function upsertSharedRow(inputLog, reading) {
+    validateNormalizedReading(reading);
+    const log = { ...(inputLog || emptySharedLog()), readings: [...(inputLog?.readings || [])] };
+    const index = log.readings.findIndex(row => row.signal_id === reading.signal_id && row.record_date === reading.record_date);
+    const existing = index >= 0 ? log.readings[index] : null;
+    const row = {
+      record_id: existing ? existing.record_id : `shared-${reading.signal_id}-${reading.record_date}`,
+      signal_id: reading.signal_id,
+      record_date: reading.record_date,
+      normalized_value: reading.normalized_value,
+      unit: reading.unit,
+      source_url: reading.source_url,
+      source_time: reading.source_time,
+      first_fetched_at: existing ? existing.first_fetched_at : reading.fetched_at,
+      last_fetched_at: reading.fetched_at
+    };
+    if (index >= 0) log.readings[index] = row;
+    else log.readings.push(row);
+    log.readings.sort((left, right) =>
+      left.signal_id.localeCompare(right.signal_id) || left.record_date.localeCompare(right.record_date));
+    return log;
+  }
+
+  function receiptPayloadFor(row) {
+    return {
+      kind: 't04_day',
+      payload: {
+        signal_id: row.signal_id,
+        record_date: row.record_date,
+        source_url: row.reading.source_url,
+        source_observed_at: row.reading.source_time,
+        normalized_value: row.normalized_value,
+        unit: row.unit
+      },
+      server_created_at: null,
+      simulated_server_date: row.record_date
+    };
+  }
+
+  function signalLocationName(signalId) {
+    const location = LOCATIONS.find(item => signalIdFor(item.id) === signalId);
+    return location ? location.name : signalId;
+  }
+
+  function evidenceReportFor(rows, options = {}) {
+    const bySignal = new Map();
+    for (const row of rows || []) {
+      if (!row || typeof row.signal_id !== 'string' || !row.reading) continue;
+      if (!bySignal.has(row.signal_id)) bySignal.set(row.signal_id, []);
+      bySignal.get(row.signal_id).push(row);
+    }
+    const signals = [...bySignal.entries()].map(([signalId, list]) => {
+      const ordered = [...list].sort((left, right) => left.record_date.localeCompare(right.record_date));
+      const dates = [...new Set(ordered.map(row => row.record_date))];
+      const report = {
+        signal_id: signalId,
+        location_name: signalLocationName(signalId),
+        dates,
+        row_count: ordered.length,
+        ready: false,
+        checks: [],
+        receipts: [],
+        recomputed_delta: null
+      };
+      if (dates.length < 2) {
+        report.checks.push({ id: 'T04-C22', ok: false, detail: `같은 지역의 서로 다른 KST 날짜 기록이 ${dates.length}건뿐입니다.` });
+        return report;
+      }
+      const previous = ordered[ordered.length - 2];
+      const current = ordered[ordered.length - 1];
+      report.checks.push({
+        id: 'T04-C22',
+        ok: previous.record_date !== current.record_date,
+        detail: `${previous.record_date}와 ${current.record_date}, 서로 다른 KST 날짜 2건`
+      });
+      const fieldsMatch = [previous, current].every(row =>
+        row.normalized_value === row.reading.normalized_value &&
+        row.unit === row.reading.unit &&
+        typeof row.reading.source_url === 'string' && row.reading.source_url.startsWith('https://') &&
+        !Number.isNaN(Date.parse(row.reading.source_time)));
+      report.checks.push({
+        id: 'T04-C23',
+        ok: fieldsMatch,
+        detail: fieldsMatch
+          ? '영수증 payload 필드가 일별 저장값·화면값과 일치합니다.'
+          : '영수증 payload 필드와 저장값이 다릅니다.'
+      });
+      const comparison = comparisonFor(ordered, current);
+      const recomputed = current.normalized_value - previous.normalized_value;
+      const deltaOk = comparison.state === 'comparable' && Math.abs(Math.abs(recomputed) - comparison.magnitude) < 1e-9;
+      const magnitude = Math.abs(recomputed);
+      const shown = Number(magnitude.toFixed(6));
+      report.recomputed_delta = {
+        direction: recomputed > 0 ? 'increase' : recomputed < 0 ? 'decrease' : 'unchanged',
+        magnitude,
+        unit: current.unit
+      };
+      report.checks.push({
+        id: 'T04-C24',
+        ok: deltaOk,
+        detail: deltaOk
+          ? `두 실제 값으로 다시 계산한 변화량 ${shown} ${current.unit}이 화면 계산과 일치합니다.`
+          : '두 실제 값으로 다시 계산한 변화량과 화면 계산이 다릅니다.'
+      });
+      report.receipts = [receiptPayloadFor(previous), receiptPayloadFor(current)];
+      report.ready = report.checks.every(check => check.ok);
+      return report;
+    });
+    const preferredId = options.signalId;
+    const primary = signals.find(signal => signal.signal_id === preferredId && signal.ready)
+      || signals.find(signal => signal.ready)
+      || signals.find(signal => signal.signal_id === preferredId)
+      || signals[0]
+      || null;
+    return {
+      generated_at: new Date().toISOString(),
+      ready_signals: signals.filter(signal => signal.ready).map(signal => signal.signal_id),
+      primary,
+      signals
+    };
+  }
+
   return Object.freeze({
-    DEFAULT_LOCATION_ID, ERROR_CODES, LOCATIONS, NORMALIZED_KEYS, SOURCE_NAME, SOURCE_URL, TIMEZONE, SIGNAL_ID,
-    applyError, applySuccessfulReading, comparisonFor, errorGuidance, kstDate, locationFor, normalizeOpenMeteo,
-    recordIdFor, resetEvaluationState, runFixture, signalIdFor, sourceUrlFor, validateNormalizedReading, validateStatus
+    DEFAULT_LOCATION_ID, ERROR_CODES, LOCATIONS, NORMALIZED_KEYS, SHARED_LOG_SCHEMA, SOURCE_NAME, SOURCE_URL, TIMEZONE, SIGNAL_ID,
+    applyError, applySuccessfulReading, comparisonFor, emptySharedLog, errorGuidance, evidenceReportFor, kstDate,
+    locationFor, normalizeOpenMeteo, receiptPayloadFor, recordIdFor, resetEvaluationState, runFixture,
+    signalIdFor, sourceUrlFor, upsertSharedRow, validateNormalizedReading, validateStatus
   });
 });
