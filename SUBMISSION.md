@@ -6,7 +6,7 @@ https://sterran123.github.io/daily-signal-board/
 
 ## 소스 저장소 URL
 
-https://github.com/sterran123/daily-signal-board/commit/35f5d952ed0813f8a75c3c51c6916094bfd5444f
+https://github.com/sterran123/daily-signal-board/commit/5ae9162b4b5def5296ae0bd4df579100e3ebd04d
 
 ## 재현·통과 확인 4가지
 
