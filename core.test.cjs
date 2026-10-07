@@ -123,6 +123,13 @@ test('every external failure preserves the last good record and marks it stale',
   }
 });
 
+test('every failure type gives its own explanation and next action', () => {
+  const guidance = Core.ERROR_CODES.map(code => Core.errorGuidance(code));
+  assert.equal(new Set(guidance.map(item => item.explanation)).size, Core.ERROR_CODES.length);
+  assert.equal(new Set(guidance.map(item => item.next_action)).size, Core.ERROR_CODES.length);
+  assert.match(Core.errorGuidance('rate_limit', 60).next_action, /60초/);
+});
+
 test('retry after a synthetic failure returns to fresh and adds exactly one next-day row', () => {
   let state = successBaseline();
   state = run(state, 'timeout.json');

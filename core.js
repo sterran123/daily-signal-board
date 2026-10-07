@@ -44,6 +44,40 @@
     'source_time', 'fetched_at', 'record_timezone', 'record_date'
   ]);
   const ERROR_CODES = Object.freeze(['timeout', 'auth', 'rate_limit', 'offline', 'schema_error']);
+  const ERROR_GUIDANCE = Object.freeze({
+    timeout: Object.freeze({
+      explanation: '정해진 대기 시간 안에 공개 원천 응답이 오지 않았습니다.',
+      next_action: '잠시 기다린 뒤 ‘지금 다시 조회’를 누르세요.'
+    }),
+    auth: Object.freeze({
+      explanation: '공개 원천이 HTTP 401 또는 403으로 요청을 거부했습니다.',
+      next_action: '로그인 정보를 입력하지 말고 출처 서비스 상태와 요청 주소를 확인한 뒤 다시 조회하세요.'
+    }),
+    rate_limit: Object.freeze({
+      explanation: '공개 원천이 HTTP 429 호출 제한을 보냈습니다.',
+      next_action: '요청을 반복하지 말고 잠시 기다린 뒤 다시 조회하세요.'
+    }),
+    offline: Object.freeze({
+      explanation: '브라우저가 네트워크에 연결되지 않았습니다.',
+      next_action: '인터넷 연결을 복구한 뒤 다시 조회하세요.'
+    }),
+    schema_error: Object.freeze({
+      explanation: '응답에서 필요한 기온 값·단위·시각을 읽지 못했습니다.',
+      next_action: '마지막 정상값을 참고하고 출처 응답 형식이 회복된 뒤 다시 조회하세요.'
+    })
+  });
+
+  function errorGuidance(errorCode, retryAfterSeconds = null) {
+    const guidance = ERROR_GUIDANCE[errorCode] || ERROR_GUIDANCE.schema_error;
+    const retryAfter = Number(retryAfterSeconds);
+    if (errorCode === 'rate_limit' && Number.isFinite(retryAfter) && retryAfter > 0) {
+      return {
+        ...guidance,
+        next_action: `Retry-After에 안내된 약 ${Math.ceil(retryAfter)}초를 기다린 뒤 다시 조회하세요.`
+      };
+    }
+    return guidance;
+  }
 
   function clone(value) {
     return JSON.parse(JSON.stringify(value));
@@ -226,7 +260,7 @@
 
   return Object.freeze({
     DEFAULT_LOCATION_ID, ERROR_CODES, LOCATIONS, NORMALIZED_KEYS, SOURCE_NAME, SOURCE_URL, TIMEZONE, SIGNAL_ID,
-    applyError, applySuccessfulReading, comparisonFor, kstDate, locationFor, normalizeOpenMeteo,
+    applyError, applySuccessfulReading, comparisonFor, errorGuidance, kstDate, locationFor, normalizeOpenMeteo,
     recordIdFor, resetEvaluationState, runFixture, signalIdFor, sourceUrlFor, validateNormalizedReading, validateStatus
   });
 });

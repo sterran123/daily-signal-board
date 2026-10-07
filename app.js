@@ -182,9 +182,12 @@ function renderLive() {
   $('recordDate').textContent = formatDate(reading?.record_date);
   const alerts = [];
   if (status?.freshness === 'stale') {
-    alerts.push(reading
-      ? `외부 조회에 실패했습니다 (${errorLabels[status.error_code] || status.error_code}). 마지막 정상값 ${formatValue(reading.normalized_value, reading.unit)}은 지우지 않았습니다. 다시 조회해 복구할 수 있습니다.`
-      : `외부 조회에 실패했습니다 (${errorLabels[status.error_code] || status.error_code}). 아직 보존된 정상값이 없습니다. 연결을 확인하고 다시 조회하세요.`);
+    const guidance = Core.errorGuidance(status.error_code, liveState.last_run?.retry_after_seconds);
+    alerts.push([
+      guidance.explanation,
+      reading ? `마지막 정상값 ${formatValue(reading.normalized_value, reading.unit)}은 보존했습니다.` : '아직 보존된 정상값은 없습니다.',
+      `다음 행동: ${guidance.next_action}`
+    ].join(' '));
   }
   if (liveErrorMessage) alerts.push(liveErrorMessage);
   if (storageMessage) alerts.push(storageMessage);
@@ -370,7 +373,13 @@ async function replayFixtures(ids, title) {
 }
 
 function renderFixtureLog(title, entries) {
-  $('fixtureSummary').textContent = title;
+  const status = fixtureState.status;
+  if (status?.freshness === 'stale') {
+    const guidance = Core.errorGuidance(status.error_code, fixtureState.last_run?.retry_after_seconds);
+    $('fixtureSummary').textContent = `${title} · ${guidance.explanation} 다음 행동: ${guidance.next_action}`;
+  } else {
+    $('fixtureSummary').textContent = title;
+  }
   const list = $('fixtureLog'); list.replaceChildren();
   for (const entry of entries) {
     const item = document.createElement('li');

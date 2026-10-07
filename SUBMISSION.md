@@ -12,8 +12,8 @@ https://github.com/sterran123/daily-signal-board/commit/5ae9162b4b5def5296ae0bd4
 
 1. **어디로 가나요** — 공개 결과물 URL을 새 시크릿 창에서 엽니다. 로그인은 필요하지 않습니다.
 2. **무엇을 하나요 (3단계)** — ① 조회 지역을 고르고 `지금 다시 조회`를 누릅니다. ② 원자료·저장값·화면값과 출처 시각·조회 시각·KST 날짜를 확인합니다. ③ `실패 상황 재생`에서 실패와 `오류 후 복구`를 실행합니다.
-3. **무엇이 보이면 통과인가요** — 선택 지역의 원자료·정규화 저장값·화면값이 일치하고 지역별 기록이 섞이지 않습니다. 같은 지역에서 같은 날짜는 한 행으로 갱신되며 다른 날짜는 새 행과 전일 대비가 생깁니다. 실패 재생에서는 마지막 정상값이 유지되고 복구 뒤 `fresh / none`으로 돌아옵니다.
-4. **안 될 때 무엇이 보이나요** — 실패 종류에 맞는 `timeout`·`auth`·`rate_limit`·`offline`·`schema_error`와 마지막 정상값 또는 정상값 부재 설명이 표시되며 다시 조회할 수 있습니다.
+3. **무엇이 보이면 통과인가요** — 선택 지역의 원자료·정규화 저장값·화면값이 일치하고 지역별 기록이 섞이지 않습니다. 같은 지역에서 같은 날짜는 한 행으로 갱신되며 다른 날짜는 새 행과 전일 대비가 생깁니다. 각 실패에는 원인별 다음 행동이 나오고, 마지막 정상값이 유지되며 복구 뒤 `fresh / none`으로 돌아옵니다.
+4. **안 될 때 무엇이 보이나요** — `timeout`은 잠시 기다리기, `auth`는 출처 상태 확인, `rate_limit`은 `Retry-After` 대기, `offline`은 연결 복구, `schema_error`는 출처 응답 형식 확인을 안내합니다. 모든 경우에 마지막 정상값과 다시 조회 버튼을 유지합니다.
 
 ## AI와 내 판단 3줄
 
@@ -30,6 +30,8 @@ https://github.com/sterran123/daily-signal-board/commit/5ae9162b4b5def5296ae0bd4
 - `checks/t04-regions-desktop.png` — 지역 선택 및 실제 조회 화면
 - `checks/t04-regions-mobile.png` — 모바일 배치와 지역 선택
 - `checks/t04-regions-fixtures.png` — 정상·실패·복구 fixture 결과
+- `checks/t04-failure-guidance.png` — 호출 제한에서 마지막 정상값 보존과 대기 안내
+- `checks/t04-failure-guidance-mobile.png` — 모바일에서 실패 안내 줄바꿈 확인
 
 ## 공개 원천
 
