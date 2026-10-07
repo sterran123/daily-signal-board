@@ -44,6 +44,35 @@ test('live Open-Meteo data normalizes source time and KST record date without ex
   assert.equal(reading.record_timezone, 'Asia/Seoul');
 });
 
+test('selected regions keep separate signals and only compare against their own saved dates', () => {
+  const seoul = Core.normalizeOpenMeteo({
+    timezone: 'Asia/Seoul',
+    current_units: { temperature_2m: '°C' },
+    current: { time: '2026-08-24T17:00', temperature_2m: 28.4 }
+  }, { fetchedAt: '2026-08-24T14:59:00.000Z', locationId: 'seoul' });
+  const busan = Core.normalizeOpenMeteo({
+    timezone: 'Asia/Seoul',
+    current_units: { temperature_2m: '°C' },
+    current: { time: '2026-08-24T17:00', temperature_2m: 29.0 }
+  }, { fetchedAt: '2026-08-24T14:59:00.000Z', locationId: 'busan' });
+  let state = Core.applySuccessfulReading(Core.resetEvaluationState(), seoul);
+  state = Core.applySuccessfulReading(state, busan);
+  assert.equal(state.daily_readings.length, 2);
+  assert.equal(busan.signal_id, 'busan.temperature_2m');
+  assert.match(busan.source_url, /latitude=35\.1796/);
+  assert.match(busan.source_url, /longitude=129\.0756/);
+  assert.equal(state.last_comparison.state, 'insufficient');
+  const nextBusan = Core.normalizeOpenMeteo({
+    timezone: 'Asia/Seoul',
+    current_units: { temperature_2m: '°C' },
+    current: { time: '2026-08-25T17:00', temperature_2m: 30.2 }
+  }, { fetchedAt: '2026-08-25T14:59:00.000Z', locationId: 'busan' });
+  state = Core.applySuccessfulReading(state, nextBusan);
+  assert.equal(state.daily_readings.length, 3);
+  assert.ok(Math.abs(state.last_comparison.magnitude - 1.2) < 1e-9);
+  assert.equal(state.last_comparison.unit, '°C');
+});
+
 test('raw source response matches the normalized value saved for the day', () => {
   const raw = {
     timezone: 'Asia/Seoul',

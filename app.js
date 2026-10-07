@@ -2,6 +2,7 @@
 
 const Core = window.T04Core;
 const LIVE_KEY = 'daily-signal-board-live-v1';
+const LOCATION_KEY = 'daily-signal-board-location-v1';
 const FIXTURE_ROOT = 'assets/studio-task-assets/t04-real-information-board/fixtures/';
 const $ = id => document.getElementById(id);
 const fixtureFiles = {
@@ -23,6 +24,12 @@ const errorLabels = {
   schema_error: '응답 형식 오류',
   none: '오류 없음'
 };
+function readLocationId() {
+  try { return Core.locationFor(localStorage.getItem(LOCATION_KEY)).id; }
+  catch { return Core.DEFAULT_LOCATION_ID; }
+}
+
+let selectedLocationId = readLocationId();
 let liveState = loadLiveState();
 let liveBusy = false;
 let liveErrorMessage = '';
@@ -37,12 +44,25 @@ function loadLiveState() {
     const readings = saved.daily_readings.filter(row => {
       try { Core.validateNormalizedReading(row.reading); return true; } catch { return false; }
     });
+    const statusBySignal = Object.fromEntries(Object.entries(saved.status_by_signal || {})
+      .filter(([signal, status]) => /^[a-z0-9][a-z0-9._-]{0,99}$/.test(signal) && Core.validateStatus(status)));
+    if (saved.current_reading?.signal_id && Core.validateStatus(saved.status)) {
+      statusBySignal[saved.current_reading.signal_id] = saved.status;
+    }
+    const signalId = Core.signalIdFor(selectedLocationId);
+    const currentRow = readings.filter(row => row.signal_id === signalId)
+      .sort((left, right) => right.record_date.localeCompare(left.record_date))[0] || null;
+    const comparison = currentRow ? Core.comparisonFor(readings, currentRow) : Core.resetEvaluationState().last_comparison;
     return {
       ...Core.resetEvaluationState(),
       ...saved,
       daily_readings: readings,
-      current_reading: readings.at(-1)?.reading || null,
-      status: Core.validateStatus(saved.status) ? saved.status : null
+      status_by_signal: statusBySignal,
+      current_reading: currentRow?.reading || null,
+      current_source_response: currentRow?.source_response || null,
+      status: statusBySignal[signalId] || null,
+      last_comparison: comparison,
+      last_delta: comparison.magnitude
     };
   } catch {
     return Core.resetEvaluationState();
@@ -51,6 +71,7 @@ function loadLiveState() {
 
 function saveLiveState() {
   try {
+    localStorage.setItem(LOCATION_KEY, selectedLocationId);
     localStorage.setItem(LIVE_KEY, JSON.stringify(liveState));
     storageMessage = '';
   } catch {
@@ -95,7 +116,9 @@ function formatDelta(comparison) {
 function renderHistory() {
   const body = $('historyRows');
   body.replaceChildren();
-  const rows = [...liveState.daily_readings].sort((a, b) => b.record_date.localeCompare(a.record_date));
+  const signalId = Core.signalIdFor(selectedLocationId);
+  const rows = liveState.daily_readings.filter(row => row.signal_id === signalId)
+    .sort((a, b) => b.record_date.localeCompare(a.record_date));
   $('recordCount').textContent = `${rows.length}일`;
   $('historyEmpty').hidden = rows.length > 0;
   for (const row of rows) {
@@ -112,9 +135,17 @@ function renderHistory() {
 }
 
 function renderLive() {
-  const reading = liveState.current_reading;
-  const status = liveState.status;
+  const location = Core.locationFor(selectedLocationId);
+  const signalId = Core.signalIdFor(location.id);
+  const reading = liveState.current_reading?.signal_id === signalId ? liveState.current_reading : null;
+  const sourceResponse = reading ? liveState.current_source_response : null;
+  const status = liveState.status_by_signal?.[signalId] || (reading ? liveState.status : null);
   const stateName = liveBusy ? 'loading' : status?.freshness || 'empty';
+  $('locationSelect').value = location.id;
+  $('locationSelect').disabled = liveBusy;
+  $('selectedLocationName').textContent = location.name;
+  $('current-title').textContent = `${location.name} 현재 기온`;
+  $('locationChip').textContent = location.label;
   const statusLabel = liveBusy ? '확인 중' : status?.freshness === 'fresh' ? '정상 조회' : status?.freshness === 'stale' ? '마지막 정상값' : '기록 없음';
   $('liveStatus').dataset.status = stateName;
   $('liveStatus').textContent = statusLabel;
@@ -129,19 +160,19 @@ function renderLive() {
   $('refreshButton').textContent = liveBusy ? '조회 중…' : '지금 다시 조회';
   $('currentValue').textContent = reading ? formatNumber(reading.normalized_value) : '—';
   $('currentUnit').textContent = reading?.unit || '°C';
-  const rawCurrent = liveState.current_source_response?.current;
-  const rawUnit = liveState.current_source_response?.current_units?.temperature_2m || reading?.unit;
+  const rawCurrent = sourceResponse?.current;
+  const rawUnit = sourceResponse?.current_units?.temperature_2m || reading?.unit;
   $('rawValue').textContent = rawCurrent ? formatValue(rawCurrent.temperature_2m, rawUnit) : '—';
   $('storedValue').textContent = reading ? formatValue(reading.normalized_value, reading.unit) : '—';
   $('displayedValue').textContent = reading ? formatValue(reading.normalized_value, reading.unit) : '—';
   $('readingContext').textContent = reading
-    ? `${formatDate(reading.record_date)}에 이 브라우저에서 저장한 마지막 정상값입니다.`
+    ? `${formatDate(reading.record_date)} ${location.name} 기록 중 마지막 정상값입니다.`
     : '정상 응답을 받으면 값과 출처 시각을 함께 기록합니다.';
   const comparison = liveState.last_comparison;
   $('deltaBox').dataset.direction = comparison?.direction || 'none';
   $('deltaValue').textContent = formatDelta(comparison);
   $('deltaNote').textContent = comparison?.state === 'comparable'
-    ? `${liveState.status?.freshness === 'stale' ? '마지막 정상 기록 기준 · ' : ''}저장된 이전 날짜 값에서 직접 계산했습니다.`
+    ? `${status?.freshness === 'stale' ? '마지막 정상 기록 기준 · ' : ''}선택한 지역의 이전 날짜 값에서 직접 계산했습니다.`
     : comparison?.state === 'unit_mismatch'
       ? '단위가 같은 기록을 찾지 못했습니다.'
       : '서로 다른 KST 날짜의 정상 기록 두 건이 생기면 계산합니다.';
@@ -169,8 +200,30 @@ function classifyHttp(response) {
   return 'schema_error';
 }
 
+function selectLocation(locationId) {
+  const location = Core.locationFor(locationId);
+  if (location.id === selectedLocationId) return;
+  selectedLocationId = location.id;
+  try { localStorage.setItem(LOCATION_KEY, selectedLocationId); }
+  catch { storageMessage = '지역 선택을 이 브라우저에 저장하지 못했습니다.'; }
+  const signalId = Core.signalIdFor(location.id);
+  const rows = liveState.daily_readings.filter(row => row.signal_id === signalId);
+  const currentRow = [...rows].sort((left, right) => right.record_date.localeCompare(left.record_date))[0] || null;
+  liveState.current_reading = currentRow?.reading || null;
+  liveState.current_source_response = currentRow?.source_response || null;
+  liveState.status = liveState.status_by_signal?.[signalId] || (currentRow ? { freshness: 'fresh', error_code: 'none' } : null);
+  liveState.last_comparison = currentRow ? Core.comparisonFor(rows, currentRow) : Core.resetEvaluationState().last_comparison;
+  liveState.last_delta = liveState.last_comparison.magnitude;
+  liveErrorMessage = '';
+  renderLive();
+  refreshLive();
+}
+
 async function refreshLive() {
   if (liveBusy) return;
+  const requestLocationId = selectedLocationId;
+  const requestSignalId = Core.signalIdFor(requestLocationId);
+  const sourceUrl = Core.sourceUrlFor(requestLocationId);
   liveBusy = true;
   liveErrorMessage = '';
   renderLive();
@@ -184,7 +237,7 @@ async function refreshLive() {
     }
     let response;
     try {
-      response = await fetch(Core.SOURCE_URL, { cache: 'no-store', signal: controller.signal });
+      response = await fetch(sourceUrl, { cache: 'no-store', signal: controller.signal });
     } catch (cause) {
       const error = new Error(controller.signal.aborted ? '요청 시간이 초과되었습니다.' : '네트워크 연결 또는 브라우저 요청을 확인하세요.');
       error.code = controller.signal.aborted ? 'timeout' : 'offline';
@@ -200,13 +253,15 @@ async function refreshLive() {
     try { payload = await response.json(); }
     catch { const error = new Error('출처 응답을 JSON으로 읽지 못했습니다.'); error.code = 'schema_error'; throw error; }
     let reading;
-    try { reading = Core.normalizeOpenMeteo(payload, { fetchedAt: new Date().toISOString() }); }
+    try { reading = Core.normalizeOpenMeteo(payload, { fetchedAt: new Date().toISOString(), locationId: requestLocationId, sourceUrl }); }
     catch (cause) { const error = new Error(cause.message); error.code = 'schema_error'; throw error; }
     liveState = Core.applySuccessfulReading(liveState, reading, {
       virtual_now: reading.fetched_at,
       retry_after_seconds: null,
       source_response: payload
     });
+    liveState.status_by_signal ||= {};
+    liveState.status_by_signal[requestSignalId] = liveState.status;
     saveLiveState();
   } catch (error) {
     let code = error.code;
@@ -217,6 +272,8 @@ async function refreshLive() {
       virtual_now: new Date().toISOString(),
       retry_after_seconds: Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : null
     });
+    liveState.status_by_signal ||= {};
+    liveState.status_by_signal[requestSignalId] = liveState.status;
     liveErrorMessage = error.message || '응답을 읽지 못했습니다.';
     saveLiveState();
   } finally {
@@ -324,6 +381,7 @@ function renderFixtureLog(title, entries) {
 }
 
 $('refreshButton').addEventListener('click', refreshLive);
+$('locationSelect').addEventListener('change', event => selectLocation(event.target.value));
 $('runNormal').addEventListener('click', () => replayFixtures(['T04-NORMAL-D1-A', 'T04-NORMAL-D1-B', 'T04-NORMAL-D2'], '정상 일별 저장 시퀀스 · 합성 전용'));
 $('runRecovery').addEventListener('click', () => replayFixtures(['T04-NORMAL-D1-A', 'T04-NORMAL-D1-B', 'T04-TIMEOUT', 'T04-RECOVER-D2'], '오류 후 회복 시퀀스 · 합성 전용'));
 $('resetFixtures').addEventListener('click', () => {

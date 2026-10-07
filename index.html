@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="서울의 현재 기온을 공개 원천에서 불러오고 매일 기록해 어제와 비교하는 정보판입니다.">
-  <title>오늘의 진짜 정보판 — 서울 현재 기온</title>
+  <meta name="description" content="지역을 선택해 Open-Meteo 현재 기온을 조회하고 KST 날짜별로 기록·비교하는 공개 정보판입니다.">
+  <title>오늘의 진짜 정보판 — 지역별 현재 기온</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="styles.css">
   <script src="core.js" defer></script>
@@ -17,7 +17,7 @@
       <span><small>DAILY SIGNAL BOARD</small><strong>오늘의 진짜 정보판</strong></span>
     </a>
     <div class="top-actions">
-      <span class="local-note">이 기기에만 기록</span>
+      <span class="local-note">이 브라우저에 기록</span>
       <button id="refreshButton" class="button button-primary" type="button">지금 다시 조회</button>
     </div>
   </header>
@@ -25,9 +25,9 @@
   <main class="page-shell">
     <section class="intro" aria-labelledby="page-title">
       <div>
-        <p class="eyebrow">PUBLIC DATA · SEOUL</p>
-        <h1 id="page-title">오늘 서울은 몇 도일까요?</h1>
-        <p class="intro-copy">서울시청 고정 좌표의 15분 간격 모델 기반 현재 기온을 조회합니다. 측정소 실측값은 아닙니다. 응답이 늦거나 멈추면 마지막 정상값을 남기고 상태를 따로 알려드립니다.</p>
+        <p class="eyebrow">PUBLIC DATA · KOREA</p>
+        <h1 id="page-title">오늘 <span id="selectedLocationName">서울</span>은 몇 도일까요?</h1>
+        <p class="intro-copy">지역 목록에서 도시를 고르면 해당 시청 중심 좌표의 Open-Meteo 현재 기온을 조회합니다. 15분 간격 모델 기반 값이며 측정소 실측값은 아닙니다. 위치 권한 없이 지역을 직접 선택할 수 있습니다.</p>
       </div>
       <div class="live-status-wrap">
         <span class="status-pill" id="liveStatus" data-status="loading" role="status" aria-live="polite">처음 조회 중</span>
@@ -42,7 +42,19 @@
             <p class="eyebrow">CURRENT READING</p>
             <h2 id="current-title">서울 현재 기온</h2>
           </div>
-          <span class="location-chip">서울시청 부근</span>
+          <div class="location-control">
+            <label for="locationSelect">조회 지역</label>
+            <select id="locationSelect" name="location" aria-describedby="locationChip">
+              <option value="seoul">서울</option>
+              <option value="busan">부산</option>
+              <option value="incheon">인천</option>
+              <option value="daegu">대구</option>
+              <option value="daejeon">대전</option>
+              <option value="gwangju">광주</option>
+              <option value="jeju">제주</option>
+            </select>
+            <small class="location-chip" id="locationChip">서울시청 중심 좌표</small>
+          </div>
         </div>
 
         <div class="reading-main">
@@ -128,7 +140,7 @@
 
     <footer class="page-footer">
       <span>실제 데이터는 매번 다시 조회합니다. 장애 중에는 마지막 정상값과 오류 원인을 함께 표시합니다.</span>
-      <span>서울 고정 좌표 · 브라우저 로컬 기록 · 비밀키 없음</span>
+      <span>선택 지역 중심 좌표 · 브라우저별 로컬 기록 · 비밀키 없음</span>
     </footer>
   </main>
 </body>

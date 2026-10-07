@@ -6,9 +6,39 @@
   'use strict';
 
   const TIMEZONE = 'Asia/Seoul';
-  const SIGNAL_ID = 'seoul.temperature_2m';
-  const SOURCE_NAME = 'Open-Meteo · 서울 현재 기온';
-  const SOURCE_URL = 'https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.9780&current=temperature_2m&timezone=Asia%2FSeoul';
+  const DEFAULT_LOCATION_ID = 'seoul';
+  const LOCATIONS = Object.freeze([
+    Object.freeze({ id: 'seoul', name: '서울', label: '서울시청 중심 좌표', latitude: 37.5665, longitude: 126.9780 }),
+    Object.freeze({ id: 'busan', name: '부산', label: '부산시청 중심 좌표', latitude: 35.1796, longitude: 129.0756 }),
+    Object.freeze({ id: 'incheon', name: '인천', label: '인천시청 중심 좌표', latitude: 37.4563, longitude: 126.7052 }),
+    Object.freeze({ id: 'daegu', name: '대구', label: '대구시청 중심 좌표', latitude: 35.8714, longitude: 128.6014 }),
+    Object.freeze({ id: 'daejeon', name: '대전', label: '대전시청 중심 좌표', latitude: 36.3504, longitude: 127.3845 }),
+    Object.freeze({ id: 'gwangju', name: '광주', label: '광주시청 중심 좌표', latitude: 35.1595, longitude: 126.8526 }),
+    Object.freeze({ id: 'jeju', name: '제주', label: '제주시청 중심 좌표', latitude: 33.4996, longitude: 126.5312 })
+  ]);
+
+  function locationFor(id = DEFAULT_LOCATION_ID) {
+    return LOCATIONS.find(location => location.id === id) || LOCATIONS[0];
+  }
+
+  function signalIdFor(locationId = DEFAULT_LOCATION_ID) {
+    return `${locationFor(locationId).id}.temperature_2m`;
+  }
+
+  function sourceUrlFor(locationId = DEFAULT_LOCATION_ID) {
+    const location = locationFor(locationId);
+    const query = new URLSearchParams({
+      latitude: String(location.latitude),
+      longitude: String(location.longitude),
+      current: 'temperature_2m',
+      timezone: TIMEZONE
+    });
+    return `https://api.open-meteo.com/v1/forecast?${query}`;
+  }
+
+  const SIGNAL_ID = signalIdFor();
+  const SOURCE_NAME = `Open-Meteo · ${locationFor().name} 현재 기온`;
+  const SOURCE_URL = sourceUrlFor();
   const NORMALIZED_KEYS = Object.freeze([
     'signal_id', 'normalized_value', 'unit', 'source_name', 'source_url',
     'source_time', 'fetched_at', 'record_timezone', 'record_date'
@@ -48,12 +78,13 @@
       throw new TypeError('기온 값 또는 단위가 올바르지 않습니다.');
     }
     const fetchedAt = options.fetchedAt || new Date().toISOString();
+    const location = locationFor(options.locationId);
     const reading = {
-      signal_id: SIGNAL_ID,
+      signal_id: signalIdFor(location.id),
       normalized_value: value,
       unit,
-      source_name: SOURCE_NAME,
-      source_url: options.sourceUrl || SOURCE_URL,
+      source_name: options.sourceName || `Open-Meteo · ${location.name} 현재 기온`,
+      source_url: options.sourceUrl || sourceUrlFor(location.id),
       source_time: sourceTimeIso(payload.current.time),
       fetched_at: fetchedAt,
       record_timezone: TIMEZONE,
@@ -194,8 +225,8 @@
   }
 
   return Object.freeze({
-    ERROR_CODES, NORMALIZED_KEYS, SOURCE_NAME, SOURCE_URL, TIMEZONE, SIGNAL_ID,
-    applyError, applySuccessfulReading, comparisonFor, kstDate, normalizeOpenMeteo,
-    recordIdFor, resetEvaluationState, runFixture, validateNormalizedReading, validateStatus
+    DEFAULT_LOCATION_ID, ERROR_CODES, LOCATIONS, NORMALIZED_KEYS, SOURCE_NAME, SOURCE_URL, TIMEZONE, SIGNAL_ID,
+    applyError, applySuccessfulReading, comparisonFor, kstDate, locationFor, normalizeOpenMeteo,
+    recordIdFor, resetEvaluationState, runFixture, signalIdFor, sourceUrlFor, validateNormalizedReading, validateStatus
   });
 });
