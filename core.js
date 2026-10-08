@@ -392,10 +392,49 @@
     };
   }
 
+  function sharedStatsFor(readings, signalId) {
+    const rows = (readings || [])
+      .filter(row => row && row.signal_id === signalId && typeof row.normalized_value === 'number' && Number.isFinite(row.normalized_value))
+      .sort((left, right) => left.record_date.localeCompare(right.record_date));
+    const stats = {
+      signal_id: signalId,
+      count: rows.length,
+      min: null,
+      max: null,
+      latest: null,
+      unit: null,
+      delta: { direction: 'insufficient', magnitude: null, unit: null }
+    };
+    if (rows.length === 0) return stats;
+    const values = rows.map(row => row.normalized_value);
+    stats.min = Math.min(...values);
+    stats.max = Math.max(...values);
+    stats.latest = rows[rows.length - 1].normalized_value;
+    stats.unit = rows[rows.length - 1].unit;
+    if (rows.length < 2) return stats;
+    const previous = rows[rows.length - 2];
+    const current = rows[rows.length - 1];
+    if (previous.unit !== current.unit) {
+      stats.delta = { direction: 'unit_mismatch', magnitude: null, unit: null };
+      return stats;
+    }
+    const difference = current.normalized_value - previous.normalized_value;
+    stats.delta = {
+      direction: difference > 0 ? 'increase' : difference < 0 ? 'decrease' : 'unchanged',
+      magnitude: Math.abs(difference),
+      unit: current.unit
+    };
+    return stats;
+  }
+
+  function sharedStatsCells(stats) {
+    throw new TypeError('sharedStatsCells 미구현 — AI B가 완성합니다.');
+  }
+
   return Object.freeze({
     DEFAULT_LOCATION_ID, ERROR_CODES, LOCATIONS, NORMALIZED_KEYS, SHARED_LOG_SCHEMA, SOURCE_NAME, SOURCE_URL, TIMEZONE, SIGNAL_ID,
     applyError, applySuccessfulReading, comparisonFor, emptySharedLog, errorGuidance, evidenceReportFor, kstDate,
     locationFor, normalizeOpenMeteo, receiptPayloadFor, recordIdFor, resetEvaluationState, runFixture,
-    signalIdFor, sourceUrlFor, upsertSharedRow, validateNormalizedReading, validateStatus
+    sharedStatsCells, sharedStatsFor, signalIdFor, sourceUrlFor, upsertSharedRow, validateNormalizedReading, validateStatus
   });
 });
