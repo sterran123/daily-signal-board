@@ -431,19 +431,23 @@ function renderShared() {
       .sort((left, right) => left.record_date.localeCompare(right.record_date));
     count += rows.length;
     const latest = rows[rows.length - 1] || null;
-    const comparison = latest ? Core.comparisonFor(rows, latest) : null;
+    const cells = Core.sharedStatsCells(Core.sharedStatsFor(readings, signalId));
     const tr = document.createElement('tr');
     const name = document.createElement('td');
     const date = document.createElement('td');
     const value = document.createElement('td');
+    const min = document.createElement('td');
+    const max = document.createElement('td');
     const delta = document.createElement('td');
     const total = document.createElement('td');
     name.textContent = location.name;
     date.textContent = latest ? formatDate(latest.record_date) : '—';
     value.textContent = latest ? formatValue(latest.normalized_value, latest.unit) : '—';
-    delta.textContent = comparison ? formatDelta(comparison) : '—';
+    min.textContent = cells.min;
+    max.textContent = cells.max;
+    delta.textContent = cells.trend;
     total.textContent = `${rows.length}일`;
-    tr.append(name, date, value, delta, total);
+    tr.append(name, date, value, min, max, delta, total);
     body.appendChild(tr);
   }
   $('sharedCount').textContent = `${count}건`;

@@ -428,7 +428,27 @@
   }
 
   function sharedStatsCells(stats) {
-    throw new TypeError('sharedStatsCells 미구현 — AI B가 완성합니다.');
+    const empty = { min: '—', max: '—', trend: '—' };
+    if (!stats || !stats.count) return empty;
+    const numberFormat = new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 10, useGrouping: false });
+    const amount = value => (typeof value === 'number' && Number.isFinite(value) ? numberFormat.format(value) : null);
+    const unit = stats.unit || '';
+    const min = amount(stats.min);
+    const max = amount(stats.max);
+    const delta = stats.delta || {};
+    const deltaUnit = delta.unit || unit;
+    let trend = '—';
+    if (delta.direction === 'increase' || delta.direction === 'decrease') {
+      const magnitude = amount(delta.magnitude);
+      if (magnitude !== null) trend = `${delta.direction === 'increase' ? '▲ +' : '▼ -'}${magnitude}${deltaUnit}`;
+    } else if (delta.direction === 'unchanged') {
+      trend = '– 0';
+    }
+    return {
+      min: min === null ? '—' : `${min}${unit}`,
+      max: max === null ? '—' : `${max}${unit}`,
+      trend
+    };
   }
 
   return Object.freeze({
