@@ -1,6 +1,6 @@
 {
   "schema_version": "aleph-t04-shared-daily-v1",
-  "generated_at": "2026-11-14T20:01:25.834Z",
+  "generated_at": "2026-11-15T11:25:02.133Z",
   "collector": "github-actions-schedule",
   "source": "Open-Meteo current.temperature_2m",
   "readings": [
@@ -440,9 +440,9 @@
       "normalized_value": 13.9,
       "unit": "°C",
       "source_url": "https://api.open-meteo.com/v1/forecast?latitude=35.1796&longitude=129.0756&current=temperature_2m&timezone=Asia%2FSeoul",
-      "source_time": "2026-11-14T20:00:00.000Z",
+      "source_time": "2026-11-15T11:15:00.000Z",
       "first_fetched_at": "2026-11-14T20:01:25.734Z",
-      "last_fetched_at": "2026-11-14T20:01:25.734Z"
+      "last_fetched_at": "2026-11-15T11:25:02.007Z"
     },
     {
       "record_id": "shared-daegu.temperature_2m-2026-10-07",
@@ -877,12 +877,12 @@
       "record_id": "shared-daegu.temperature_2m-2026-11-15",
       "signal_id": "daegu.temperature_2m",
       "record_date": "2026-11-15",
-      "normalized_value": 10.9,
+      "normalized_value": 12.4,
       "unit": "°C",
       "source_url": "https://api.open-meteo.com/v1/forecast?latitude=35.8714&longitude=128.6014&current=temperature_2m&timezone=Asia%2FSeoul",
-      "source_time": "2026-11-14T20:00:00.000Z",
+      "source_time": "2026-11-15T11:15:00.000Z",
       "first_fetched_at": "2026-11-14T20:01:25.775Z",
-      "last_fetched_at": "2026-11-14T20:01:25.775Z"
+      "last_fetched_at": "2026-11-15T11:25:02.058Z"
     },
     {
       "record_id": "shared-daejeon.temperature_2m-2026-10-07",
@@ -1317,12 +1317,12 @@
       "record_id": "shared-daejeon.temperature_2m-2026-11-15",
       "signal_id": "daejeon.temperature_2m",
       "record_date": "2026-11-15",
-      "normalized_value": 11.2,
+      "normalized_value": 9.1,
       "unit": "°C",
       "source_url": "https://api.open-meteo.com/v1/forecast?latitude=36.3504&longitude=127.3845&current=temperature_2m&timezone=Asia%2FSeoul",
-      "source_time": "2026-11-14T20:00:00.000Z",
+      "source_time": "2026-11-15T11:15:00.000Z",
       "first_fetched_at": "2026-11-14T20:01:25.794Z",
-      "last_fetched_at": "2026-11-14T20:01:25.794Z"
+      "last_fetched_at": "2026-11-15T11:25:02.083Z"
     },
     {
       "record_id": "shared-gwangju.temperature_2m-2026-10-07",
@@ -1757,12 +1757,12 @@
       "record_id": "shared-gwangju.temperature_2m-2026-11-15",
       "signal_id": "gwangju.temperature_2m",
       "record_date": "2026-11-15",
-      "normalized_value": 13.3,
+      "normalized_value": 10.8,
       "unit": "°C",
       "source_url": "https://api.open-meteo.com/v1/forecast?latitude=35.1595&longitude=126.8526&current=temperature_2m&timezone=Asia%2FSeoul",
-      "source_time": "2026-11-14T20:00:00.000Z",
+      "source_time": "2026-11-15T11:15:00.000Z",
       "first_fetched_at": "2026-11-14T20:01:25.814Z",
-      "last_fetched_at": "2026-11-14T20:01:25.814Z"
+      "last_fetched_at": "2026-11-15T11:25:02.108Z"
     },
     {
       "record_id": "shared-incheon.temperature_2m-2026-10-07",
@@ -2197,12 +2197,12 @@
       "record_id": "shared-incheon.temperature_2m-2026-11-15",
       "signal_id": "incheon.temperature_2m",
       "record_date": "2026-11-15",
-      "normalized_value": 9.5,
+      "normalized_value": 9.3,
       "unit": "°C",
       "source_url": "https://api.open-meteo.com/v1/forecast?latitude=37.4563&longitude=126.7052&current=temperature_2m&timezone=Asia%2FSeoul",
-      "source_time": "2026-11-14T20:00:00.000Z",
+      "source_time": "2026-11-15T11:15:00.000Z",
       "first_fetched_at": "2026-11-14T20:01:25.754Z",
-      "last_fetched_at": "2026-11-14T20:01:25.754Z"
+      "last_fetched_at": "2026-11-15T11:25:02.033Z"
     },
     {
       "record_id": "shared-jeju.temperature_2m-2026-10-07",
@@ -2637,12 +2637,12 @@
       "record_id": "shared-jeju.temperature_2m-2026-11-15",
       "signal_id": "jeju.temperature_2m",
       "record_date": "2026-11-15",
-      "normalized_value": 16.2,
+      "normalized_value": 15,
       "unit": "°C",
       "source_url": "https://api.open-meteo.com/v1/forecast?latitude=33.4996&longitude=126.5312&current=temperature_2m&timezone=Asia%2FSeoul",
-      "source_time": "2026-11-14T20:00:00.000Z",
+      "source_time": "2026-11-15T11:15:00.000Z",
       "first_fetched_at": "2026-11-14T20:01:25.833Z",
-      "last_fetched_at": "2026-11-14T20:01:25.833Z"
+      "last_fetched_at": "2026-11-15T11:25:02.133Z"
     },
     {
       "record_id": "shared-seoul.temperature_2m-2026-10-07",
@@ -3077,12 +3077,12 @@
       "record_id": "shared-seoul.temperature_2m-2026-11-15",
       "signal_id": "seoul.temperature_2m",
       "record_date": "2026-11-15",
-      "normalized_value": 9.9,
+      "normalized_value": 9.6,
       "unit": "°C",
       "source_url": "https://api.open-meteo.com/v1/forecast?latitude=37.5665&longitude=126.978&current=temperature_2m&timezone=Asia%2FSeoul",
-      "source_time": "2026-11-14T20:00:00.000Z",
+      "source_time": "2026-11-15T11:15:00.000Z",
       "first_fetched_at": "2026-11-14T20:01:25.663Z",
-      "last_fetched_at": "2026-11-14T20:01:25.663Z"
+      "last_fetched_at": "2026-11-15T11:25:01.669Z"
     }
   ]
 }
